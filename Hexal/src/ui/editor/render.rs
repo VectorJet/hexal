@@ -7,11 +7,7 @@ use super::*;
 
 impl Editor {
     pub(super) fn status_row(&self) -> usize {
-        if self.rows >= 2 {
-            self.rows - 2
-        } else {
-            0
-        }
+        if self.rows >= 2 { self.rows - 2 } else { 0 }
     }
 
     pub(super) fn command_row(&self) -> usize {
@@ -30,11 +26,7 @@ impl Editor {
     pub(super) fn gutter_width_for(&self, width: usize) -> usize {
         let marker = usize::from(self.sidebar.show_modified);
         let gutter = util::digit_count(self.doc.line_count()) + 1 + marker;
-        if width < gutter + 10 {
-            0
-        } else {
-            gutter
-        }
+        if width < gutter + 10 { 0 } else { gutter }
     }
 
     pub(super) fn clamp_viewport(&mut self) {
@@ -131,10 +123,70 @@ impl Editor {
         self.render_startup_benchmark();
         self.render_help();
 
+        let insert_cursor = self.insert_cursor_screen_position();
+
         let force = self.force_full_redraw;
         self.force_full_redraw = false;
         let output = self.renderer.render(&self.screen, force);
-        terminal.write(output)
+        terminal.write(output)?;
+        if let Some((x, y)) = insert_cursor {
+            let cursor = format!("\x1b[6 q\x1b[{};{}H\x1b[?25h", y + 1, x + 1);
+            terminal.write(cursor.as_bytes())?;
+        } else {
+            terminal.write(b"\x1b[?25l")?;
+        }
+        Ok(())
+    }
+
+    fn insert_cursor_screen_position(&self) -> Option<(usize, usize)> {
+        if self.mode != Mode::Insert {
+            return None;
+        }
+
+        let bounds = self.active_pane_bounds();
+        if bounds.width == 0 || bounds.height == 0 {
+            return None;
+        }
+
+        let gutter = self.gutter_width_for(bounds.width);
+        let line = self.cursor_line();
+        let column = self.cursor_visual_column();
+        let (row, text_column) = if self.word_wrap {
+            let text_width = bounds.width.saturating_sub(gutter).max(1);
+            let rows = self.build_wrap_rows(self.top_line, bounds.height, text_width);
+            let mut candidate = None;
+            for (row, wrapped) in rows.iter().enumerate() {
+                if wrapped.line != line {
+                    continue;
+                }
+                let segment_end = wrapped.segment.visual_start + wrapped.segment.visual_width;
+                candidate = Some((row, wrapped.segment.visual_start));
+                if column < segment_end {
+                    break;
+                }
+            }
+            let (row, segment_start) = candidate?;
+            (
+                row,
+                gutter + column.saturating_sub(segment_start).min(text_width - 1),
+            )
+        } else {
+            if line < self.top_line || line >= self.top_line.saturating_add(bounds.height) {
+                return None;
+            }
+            (
+                line - self.top_line,
+                gutter + column.saturating_sub(self.left_column),
+            )
+        };
+
+        let x = bounds.x + text_column;
+        let y = bounds.y + row;
+        if x >= self.cols || y >= self.text_rows() {
+            None
+        } else {
+            Some((x, y))
+        }
     }
 
     pub(super) fn render_line_number(&mut self, line: usize, row: usize) {
@@ -466,9 +518,11 @@ impl Editor {
             return;
         }
         let row = line - first_line;
-        let mut style = self.screen.at(x, row).style;
-        style.reverse = true;
-        self.screen.apply_style(x, row, style);
+        if self.mode != Mode::Insert || cursor != self.cursor {
+            let mut style = self.screen.at(x, row).style;
+            style.reverse = true;
+            self.screen.apply_style(x, row, style);
+        }
     }
 
     pub(super) fn render_status_line(&mut self) {

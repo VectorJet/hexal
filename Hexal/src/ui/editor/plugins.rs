@@ -541,6 +541,7 @@ mod tests {
 
         let document = Document::open(&file.to_string_lossy()).unwrap();
         let mut editor = Editor::new(document, 100, 30);
+        editor.mode = crate::ui::editor::Mode::Normal;
         editor.sidebar.root = root.clone();
 
         let mut manager = PluginManager::new(root.clone(), None);

@@ -495,7 +495,7 @@ impl Terminal {
 impl Drop for Terminal {
     fn drop(&mut self) {
         if self.raw {
-            let _ = self.write(b"\x1b[0m\x1b[?25h\x1b[?1049l");
+            let _ = self.write(b"\x1b[0m\x1b[0 q\x1b[?25h\x1b[?1049l");
             unsafe {
                 SetConsoleMode(self.input, self.original_input_mode);
                 SetConsoleMode(self.output, self.original_output_mode);

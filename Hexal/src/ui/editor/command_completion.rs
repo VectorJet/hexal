@@ -773,6 +773,7 @@ mod tests {
 
     fn editor() -> Editor {
         let mut editor = Editor::new(Document::new(), 100, 30);
+        editor.mode = Mode::Normal;
         editor.command_files = Some(vec![
             "README.md".to_string(),
             "src/lib.rs".to_string(),

@@ -262,11 +262,7 @@ impl Terminal {
             loop {
                 let mut byte = 0u8;
                 let count = unsafe {
-                    libc::read(
-                        self.input_fd,
-                        &mut byte as *mut u8 as *mut libc::c_void,
-                        1,
-                    )
+                    libc::read(self.input_fd, &mut byte as *mut u8 as *mut libc::c_void, 1)
                 };
                 if count > 0 {
                     return Ok(Some(byte));
@@ -318,7 +314,8 @@ impl Terminal {
         }
 
         let mut byte = 0u8;
-        let count = unsafe { libc::read(self.input_fd, &mut byte as *mut u8 as *mut libc::c_void, 1) };
+        let count =
+            unsafe { libc::read(self.input_fd, &mut byte as *mut u8 as *mut libc::c_void, 1) };
         if count < 0 {
             return Err(io::Error::last_os_error());
         }
@@ -402,8 +399,9 @@ impl Terminal {
 impl Drop for Terminal {
     fn drop(&mut self) {
         if self.raw {
-            let _ = self
-                .write(b"\x1b[0m\x1b[?25h\x1b[?1006l\x1b[?1002l\x1b[?1000l\x1b[?1004l\x1b[?1049l");
+            let _ = self.write(
+                b"\x1b[0m\x1b[0 q\x1b[?25h\x1b[?1006l\x1b[?1002l\x1b[?1000l\x1b[?1004l\x1b[?1049l",
+            );
             unsafe {
                 libc::tcsetattr(self.input_fd, libc::TCSAFLUSH, &self.original);
             }

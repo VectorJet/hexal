@@ -172,14 +172,19 @@ impl Editor {
         self.preferred_column = None;
         self.clear_message();
 
-        if character.is_ascii()
-            && !character.is_whitespace()
+        if !character.is_whitespace()
             && self.extra_selections.is_empty()
             && self.lsp.is_running()
             && self.lsp.is_initialized()
-            && self.lsp.is_completion_trigger(character)
+            && (character.is_alphanumeric()
+                || character == '_'
+                || self.lsp.is_completion_trigger(character))
         {
-            self.try_request_lsp_completion(Some(character));
+            let trigger = self
+                .lsp
+                .is_completion_trigger(character)
+                .then_some(character);
+            self.try_request_lsp_completion(trigger);
         }
     }
 

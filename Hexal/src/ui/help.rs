@@ -63,6 +63,10 @@ pub const HELP_LINES: &[HelpLine] = &[
     ),
     entry(":", "Open the Ex command line"),
     entry("Ctrl+P", "Open the command palette"),
+    entry(
+        "Ctrl+Q",
+        "Quit Hexal (confirms when buffers have unsaved changes)",
+    ),
     entry(":w / :wq / :q", "Write, write and quit, or quit"),
     entry(":q!", "Quit and discard unsaved changes"),
     entry("Ctrl+B", "Toggle and focus the file sidebar"),
@@ -91,7 +95,7 @@ pub const HELP_LINES: &[HelpLine] = &[
     entry("Space p / Space P", "Paste at the cursor / on a new line"),
     entry(
         "Ctrl+Space",
-        "Request language-server completions in INSERT",
+        "Request language-server completions manually in INSERT",
     ),
     blank(),
     section("Search"),

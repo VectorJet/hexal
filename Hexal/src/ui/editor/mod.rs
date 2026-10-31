@@ -34,7 +34,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, VecDeque};
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-use std::sync::{mpsc, Arc};
+use std::sync::{Arc, mpsc};
 
 use crate::core::config::Config;
 use crate::core::diff;
@@ -44,7 +44,7 @@ use crate::languages::{FormatterConfig, Highlighter, Language, Registry, Token};
 use crate::lsp::{self, Manager as LspManager};
 use crate::platform::terminal::{Event, Key, MouseButton, Terminal};
 use crate::scripting::plugin::PluginManager;
-use crate::ui::help::{HelpLineKind, HelpState, HELP_LINES};
+use crate::ui::help::{HELP_LINES, HelpLineKind, HelpState};
 use crate::ui::renderer::Renderer;
 use crate::ui::screen::Screen;
 use crate::ui::sidebar::{self as ui_sidebar, Action as SidebarAction, Sidebar};
@@ -871,7 +871,7 @@ impl Editor {
             pane_screen: Screen::new(),
             renderer: Renderer::new(),
             theme,
-            mode: Mode::Normal,
+            mode: Mode::Insert,
             running: true,
             open_file_picker_on_start: open_file_picker,
             workspace_root: workspace_root.as_deref().map(git::absolute),
@@ -1231,6 +1231,17 @@ impl Editor {
         if self.pending_window {
             self.pending_window = false;
             self.handle_pane_command(event);
+            return;
+        }
+        if event.key == Key::Char
+            && event.ctrl
+            && matches!(event.ch, 'q' | 'Q')
+            && matches!(
+                self.mode,
+                Mode::Normal | Mode::Insert | Mode::Select | Mode::Command
+            )
+        {
+            self.request_quit(false);
             return;
         }
         if matches!(

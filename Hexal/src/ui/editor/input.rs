@@ -15,7 +15,6 @@ impl Editor {
                 's' => {
                     self.save_document(None);
                 }
-                'q' => self.request_quit(false),
                 'b' => self.toggle_sidebar(),
                 _ => {}
             }
@@ -968,11 +967,19 @@ mod tests {
 
     fn editor() -> Editor {
         let mut editor = Editor::new(Document::new(), 80, 24);
+        // Most input tests exercise a specific mode explicitly or assume normal mode.
+        editor.mode = Mode::Normal;
         let directory =
             std::env::temp_dir().join(format!("hexal-command-test-{}", std::process::id()));
         let _ = std::fs::create_dir_all(&directory);
         editor.config.source_path = directory.join(".hexcfg");
         editor
+    }
+
+    #[test]
+    fn editor_starts_in_insert_mode() {
+        let editor = Editor::new(Document::new(), 80, 24);
+        assert!(matches!(editor.mode, Mode::Insert));
     }
 
     fn character(ch: char) -> Event {
@@ -999,6 +1006,37 @@ mod tests {
             mouse_y: 0,
             mouse_button: MouseButton::None,
         }
+    }
+
+    #[test]
+    fn ctrl_q_quits_from_every_editor_mode() {
+        for mode in [Mode::Normal, Mode::Insert, Mode::Select, Mode::Command] {
+            let mut editor = editor();
+            editor.mode = mode;
+            let mut event = character('q');
+            event.ctrl = true;
+
+            editor.handle_event(event);
+
+            assert!(!editor.running);
+        }
+    }
+
+    #[test]
+    fn ctrl_q_keeps_the_unsaved_changes_confirmation() {
+        let mut editor = editor();
+        editor.doc.insert(0, b"unsaved");
+        let mut event = character('q');
+        event.ctrl = true;
+
+        editor.handle_event(event);
+
+        assert!(editor.running);
+        assert!(matches!(editor.pending, Pending::Quit));
+
+        editor.handle_event(character('y'));
+
+        assert!(!editor.running);
     }
 
     #[test]

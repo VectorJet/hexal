@@ -562,9 +562,11 @@ impl Editor {
             if column < segment_end {
                 let x = gutter + column.saturating_sub(wrapped.segment.visual_start);
                 if x >= gutter && x < self.cols {
-                    let mut style = self.screen.at(x, row).style;
-                    style.reverse = true;
-                    self.screen.apply_style(x, row, style);
+                    if self.mode != Mode::Insert || cursor != self.cursor {
+                        let mut style = self.screen.at(x, row).style;
+                        style.reverse = true;
+                        self.screen.apply_style(x, row, style);
+                    }
                 }
                 return;
             }
@@ -573,9 +575,11 @@ impl Editor {
             let wrapped = wrap_rows[row];
             let x = (gutter + column.saturating_sub(wrapped.segment.visual_start))
                 .clamp(gutter, self.cols.saturating_sub(1));
-            let mut style = self.screen.at(x, row).style;
-            style.reverse = true;
-            self.screen.apply_style(x, row, style);
+            if self.mode != Mode::Insert || cursor != self.cursor {
+                let mut style = self.screen.at(x, row).style;
+                style.reverse = true;
+                self.screen.apply_style(x, row, style);
+            }
         }
     }
 }
